@@ -90,10 +90,45 @@ document.getElementById("dockDoor").innerHTML +=
 `<option value="Dock Door ${i}">Dock Door ${i}</option>`;
 }
 
-function submitStatusUpdate(){
-alert("Form created successfully. Power Automate connection comes next.");
-}
+const CONFIG = {
+  postUrl: "https://defaultc291be2656fe41058955fec9bd564d.a1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/cc5292661ae74a7fb29091234122a7e8/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=DDjf6Drg8RlSxDSXMu8W033UlNtr8Jb-5tu4IvrbC1o",
+  method: "POST"
+};
 
+async function submitStatusUpdate(){
+  const payload = {
+    dockDoor: document.getElementById("dockDoor").value,
+    status: document.getElementById("status").value,
+    employeeName: document.getElementById("employeeName").value,
+    notes: document.getElementById("notes").value
+  };
+
+  if(!payload.dockDoor || !payload.status){
+    alert("Please select a Dock Door and Status.");
+    return;
+  }
+
+  try{
+    const res = await fetch(CONFIG.postUrl, {
+      method: CONFIG.method,
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+
+    if(!res.ok){
+      throw new Error("Server returned " + res.status);
+    }
+
+    alert("Dock status updated successfully!");
+
+    document.getElementById("status").value = "";
+    document.getElementById("employeeName").value = "";
+    document.getElementById("notes").value = "";
+
+  }catch(err){
+    alert("Failed to update dock status. " + err.message);
+  }
+}
 </script>
 
 </body>
