@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Dock Status Update</title>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    background:#f4f4f4;
+    padding:20px;
+}
+
+.container{
+    max-width:600px;
+    margin:auto;
+    background:white;
+    padding:20px;
+    border-radius:10px;
+    box-shadow:0 0 10px rgba(0,0,0,.1);
+}
+
+h2{
+    text-align:center;
+}
+
+label{
+    display:block;
+    margin-top:15px;
+    font-weight:bold;
+}
+
+select,input,textarea{
+    width:100%;
+    padding:10px;
+    margin-top:5px;
+}
+
+button{
+    width:100%;
+    margin-top:20px;
+    padding:15px;
+    background:#0a5bd3;
+    color:white;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#0848a8;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Dock Status Update</h2>
+
+<label>Dock Door</label>
+<select id="dockDoor"></select>
+
+<label>Status</label>
+<select id="status">
+<option value="">Select Status</option>
+<option value="Completed Trailer">Completed Trailer</option>
+<option value="Available">Available</option>
+</select>
+
+<label>Employee Name</label>
+<input id="employeeName">
+
+<label>Notes</label>
+<textarea id="notes"></textarea>
+
+<button onclick="submitStatusUpdate()">
+Submit Update
+</button>
+
+</div>
+
+<script>
+
+for(let i=1;i<=50;i++){
+document.getElementById("dockDoor").innerHTML +=
+`<option value="Dock Door ${i}">Dock Door ${i}</option>`;
+}
+
+function submitStatusUpdate(){
+alert("Form created successfully. Power Automate connection comes next.");
+}
+
+</script>
+
+</body>
+</html>
