@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,49 +8,73 @@
 
 <style>
 body{
-    font-family: Arial, sans-serif;
-    background:#f4f4f4;
-    padding:20px;
+  font-family: Arial, sans-serif;
+  background:#f4f4f4;
+  padding:20px;
 }
 
 .container{
-    max-width:600px;
-    margin:auto;
-    background:white;
-    padding:20px;
-    border-radius:10px;
-    box-shadow:0 0 10px rgba(0,0,0,.1);
+  max-width:600px;
+  margin:auto;
+  background:white;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 0 10px rgba(0,0,0,.1);
 }
 
 h2{
-    text-align:center;
+  text-align:center;
 }
 
 label{
-    display:block;
-    margin-top:15px;
-    font-weight:bold;
+  display:block;
+  margin-top:15px;
+  font-weight:bold;
 }
 
 select,input,textarea{
-    width:100%;
-    padding:10px;
-    margin-top:5px;
+  width:100%;
+  padding:10px;
+  margin-top:5px;
+  box-sizing:border-box;
+}
+
+textarea{
+  min-height:80px;
 }
 
 button{
-    width:100%;
-    margin-top:20px;
-    padding:15px;
-    background:#0a5bd3;
-    color:white;
-    border:none;
-    border-radius:6px;
-    cursor:pointer;
+  width:100%;
+  margin-top:20px;
+  padding:15px;
+  background:#0a5bd3;
+  color:white;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  font-weight:bold;
 }
 
 button:hover{
-    background:#0848a8;
+  background:#0848a8;
+}
+
+.success{
+  display:none;
+  margin-top:15px;
+  padding:12px;
+  background:#d1fae5;
+  color:#065f46;
+  border-radius:6px;
+}
+
+.error{
+  display:none;
+  margin-top:15px;
+  padding:12px;
+  background:#fee2e2;
+  color:#991b1b;
+  border-radius:6px;
 }
 </style>
 </head>
@@ -61,41 +85,55 @@ button:hover{
 
 <h2>Dock Status Update</h2>
 
-<label>Dock Door</label>
-<select id="dockDoor"></select>
-
-<label>Status</label>
-<select id="status">
-<option value="">Select Status</option>
-<option value="Completed Trailer">Completed Trailer</option>
-<option value="Available">Available</option>
+<label for="dockDoor">Dock Door</label>
+<select id="dockDoor">
+  <option value="">Select Dock Door</option>
 </select>
 
-<label>Employee Name</label>
-<input id="employeeName">
+<label for="status">Status</label>
+<select id="status">
+  <option value="">Select Status</option>
+  <option value="Completed Trailer">Completed Trailer</option>
+  <option value="Available">Available</option>
+</select>
 
-<label>Notes</label>
-<textarea id="notes"></textarea>
+<label for="employeeName">Employee Name</label>
+<input id="employeeName" type="text" placeholder="Enter your name">
 
-<button onclick="submitStatusUpdate()">
-Submit Update
-</button>
+<label for="notes">Notes</label>
+<textarea id="notes" placeholder="Optional notes"></textarea>
+
+<button id="submitBtn" onclick="submitStatusUpdate()">Submit Update</button>
+
+<div id="successMsg" class="success">Dock status updated successfully!</div>
+<div id="errorMsg" class="error"></div>
 
 </div>
 
 <script>
-
-for(let i=1;i<=50;i++){
-document.getElementById("dockDoor").innerHTML +=
-`<option value="Dock Door ${i}">Dock Door ${i}</option>`;
-}
-
 const CONFIG = {
   postUrl: "https://defaultc291be2656fe41058955fec9bd564d.a1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/cc5292661ae74a7fb29091234122a7e8/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=DDjf6Drg8RlSxDSXMu8W033UlNtr8Jb-5tu4IvrbC1o",
   method: "POST"
 };
 
+const dockDoorSelect = document.getElementById("dockDoor");
+
+for(let i = 1; i <= 50; i++){
+  const option = document.createElement("option");
+  option.value = `Dock Door ${i}`;
+  option.textContent = `Dock Door ${i}`;
+  dockDoorSelect.appendChild(option);
+}
+
 async function submitStatusUpdate(){
+  const successMsg = document.getElementById("successMsg");
+  const errorMsg = document.getElementById("errorMsg");
+  const submitBtn = document.getElementById("submitBtn");
+
+  successMsg.style.display = "none";
+  errorMsg.style.display = "none";
+  errorMsg.textContent = "";
+
   const payload = {
     dockDoor: document.getElementById("dockDoor").value,
     status: document.getElementById("status").value,
@@ -104,14 +142,20 @@ async function submitStatusUpdate(){
   };
 
   if(!payload.dockDoor || !payload.status){
-    alert("Please select a Dock Door and Status.");
+    errorMsg.textContent = "Please select a Dock Door and Status.";
+    errorMsg.style.display = "block";
     return;
   }
 
   try{
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
+
     const res = await fetch(CONFIG.postUrl, {
       method: CONFIG.method,
-      headers: {"Content-Type":"application/json"},
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify(payload)
     });
 
@@ -119,14 +163,19 @@ async function submitStatusUpdate(){
       throw new Error("Server returned " + res.status);
     }
 
-    alert("Dock status updated successfully!");
+    successMsg.style.display = "block";
 
+    document.getElementById("dockDoor").value = "";
     document.getElementById("status").value = "";
     document.getElementById("employeeName").value = "";
     document.getElementById("notes").value = "";
 
   }catch(err){
-    alert("Failed to update dock status. " + err.message);
+    errorMsg.textContent = "Failed to update dock status. " + err.message;
+    errorMsg.style.display = "block";
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Submit Update";
   }
 }
 </script>
