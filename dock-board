@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DC399 Dock Board</title>
+
+<style>
+:root{
+  --bg:#050b12;
+  --panel:#0c1722;
+  --text:#ffffff;
+  --muted:#9aa7b4;
+  --yellow:#ffd400;
+  --available:#d9dde3;
+  --active:#d92525;
+  --completed:#3b9f22;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:radial-gradient(circle at top,#102033,#050b12 65%);
+  font-family:Arial, Helvetica, sans-serif;
+  color:var(--text);
+  overflow:hidden;
+}
+
+.board{
+  height:100vh;
+  padding:28px;
+  display:flex;
+  flex-direction:column;
+}
+
+.header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:22px;
+}
+
+.title{
+  font-size:46px;
+  font-weight:900;
+  letter-spacing:2px;
+}
+
+.title span{
+  color:var(--yellow);
+}
+
+.info{
+  display:flex;
+  gap:28px;
+  align-items:center;
+  color:#fff;
+  font-size:18px;
+}
+
+.page-label{
+  color:var(--yellow);
+  font-size:24px;
+  font-weight:900;
+}
+
+.summary{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:18px;
+  margin-bottom:26px;
+}
+
+.summary-card{
+  height:120px;
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:22px;
+  font-weight:900;
+  box-shadow:0 0 20px rgba(0,0,0,.35);
+}
+
+.summary-card .num{
+  font-size:56px;
+}
+
+.summary-card .label{
+  font-size:24px;
+}
+
+.available-card{
+  background:linear-gradient(180deg,#eef2f5,#bfc6ce);
+  color:#08111c;
+}
+
+.active-card{
+  background:linear-gradient(180deg,#ef3434,#9f1111);
+}
+
+.completed-card{
+  background:linear-gradient(180deg,#58ba37,#1f7415);
+}
+
+.grid{
+  flex:1;
+  display:grid;
+  gap:14px;
+}
+
+.grid.page1{
+  grid-template-columns:repeat(7,1fr);
+  grid-auto-rows:1fr;
+}
+
+.grid.page2{
+  grid-template-columns:repeat(8,1fr);
+  grid-auto-rows:1fr;
+}
+
+.dock{
+  border-radius:12px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  align-items:center;
+  padding:14px 8px;
+  min-height:120px;
+  box-shadow:0 0 14px rgba(0,0,0,.45);
+  border:2px solid rgba(255,255,255,.12);
+}
+
+.dock-number{
+  font-size:26px;
+  font-weight:900;
+}
+
+.icon{
+  font-size:42px;
+  line-height:1;
+}
+
+.trailer{
+  font-size:24px;
+  font-weight:900;
+  min-height:28px;
+}
+
+.available{
+  background:linear-gradient(180deg,#f0f3f6,#b8c0c9);
+  color:#07111c;
+}
+
+.active{
+  background:linear-gradient(180deg,#f03a34,#a91414);
+}
+
+.completed{
+  background:linear-gradient(180deg,#54b633,#237a17);
+}
+
+.footer{
+  margin-top:14px;
+  display:flex;
+  justify-content:space-between;
+  color:var(--muted);
+  font-size:16px;
+}
+
+.hidden{
+  display:none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="board">
+
+  <div class="header">
+    <div class="title"><span>DC399</span> DOCK BOARD</div>
+    <div class="page-label" id="pageLabel">DOORS 1 - 13</div>
+    <div class="info">
+      <div id="clock">--:--</div>
+      <div>Auto Refresh: <span style="color:#38bdf8">30 sec</span></div>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="summary-card available-card">
+      <div class="icon">▣</div>
+      <div class="num" id="availableCount">0</div>
+      <div class="label">AVAILABLE</div>
+    </div>
+
+    <div class="summary-card active-card">
+      <div class="icon">🚚</div>
+      <div class="num" id="activeCount">0</div>
+      <div class="label">ACTIVE</div>
+    </div>
+
+    <div class="summary-card completed-card">
+      <div class="icon">✓</div>
+      <div class="num" id="completedCount">0</div>
+      <div class="label">COMPLETED</div>
+    </div>
+  </div>
+
+  <div id="dockGrid" class="grid page1"></div>
+
+  <div class="footer">
+    <div id="lastUpdated">Last updated: --</div>
+    <div id="pageTimer">Switching screens every 15 seconds</div>
+  </div>
+
+</div>
+
+<script>
+const CONFIG = {
+  dataUrl: "https://defaultc291be2656fe41058955fec9bd564d.a1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/87584cdb7ee7463e897752f22229ed6f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=IiWTUWO6NRCl2rN-xDt_WAWlYtdq7cO4ONPoF8K7_HE",
+  refreshMs: 30000,
+  rotateMs: 15000
+};
+
+let dockData = [];
+let currentPage = 1;
+
+function normalizeRow(row){
+  return {
+    dockDoor: row["Dock Door"] || row["DockDoor"] || "",
+    trailer: row["Trailer Number"] || row["TrailerNumber"] || "",
+    status: row["Status"] || "Available",
+    lastUpdated: row["Last Updated"] || row["LastUpdated"] || ""
+  };
+}
+
+function dockNumber(dockDoor){
+  const match = String(dockDoor).match(/\d+/);
+  return match ? Number(match[0]) : 0;
+}
+
+function statusClass(status){
+  if(status === "Active") return "active";
+  if(status === "Completed Trailer") return "completed";
+  return "available";
+}
+
+function statusIcon(status){
+  if(status === "Active") return "🚚";
+  if(status === "Completed Trailer") return "🚚✓";
+  return "▣";
+}
+
+function render(){
+  const grid = document.getElementById("dockGrid");
+
+  const available = dockData.filter(d => d.status === "Available").length;
+  const active = dockData.filter(d => d.status === "Active").length;
+  const completed = dockData.filter(d => d.status === "Completed Trailer").length;
+
+  document.getElementById("availableCount").textContent = available;
+  document.getElementById("activeCount").textContent = active;
+  document.getElementById("completedCount").textContent = completed;
+
+  const min = currentPage === 1 ? 1 : 14;
+  const max = currentPage === 1 ? 13 : 50;
+
+  document.getElementById("pageLabel").textContent =
+    currentPage === 1 ? "DOORS 1 - 13" : "DOORS 14 - 50";
+
+  grid.className = currentPage === 1 ? "grid page1" : "grid page2";
+  grid.innerHTML = "";
+
+  const pageDoors = dockData
+    .filter(d => {
+      const n = dockNumber(d.dockDoor);
+      return n >= min && n <= max;
+    })
+    .sort((a,b) => dockNumber(a.dockDoor) - dockNumber(b.dockDoor));
+
+  pageDoors.forEach(d => {
+    const n = dockNumber(d.dockDoor);
+    const div = document.createElement("div");
+    div.className = `dock ${statusClass(d.status)}`;
+    div.innerHTML = `
+      <div class="dock-number">${String(n).padStart(2,"0")}</div>
+      <div class="icon">${statusIcon(d.status)}</div>
+      <div class="trailer">${d.status === "Available" ? "" : d.trailer}</div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+async function loadData(){
+  try{
+    const res = await fetch(CONFIG.dataUrl, { method:"POST" });
+    if(!res.ok) throw new Error("Server returned " + res.status);
+
+    const data = await res.json();
+    dockData = data.map(normalizeRow);
+
+    render();
+
+    document.getElementById("lastUpdated").textContent =
+      "Last updated: " + new Date().toLocaleTimeString([], {
+        hour:"numeric",
+        minute:"2-digit"
+      });
+
+  }catch(err){
+    console.error(err);
+    document.getElementById("lastUpdated").textContent =
+      "Error loading data";
+  }
+}
+
+function updateClock(){
+  document.getElementById("clock").textContent =
+    new Date().toLocaleTimeString([], {
+      hour:"numeric",
+      minute:"2-digit"
+    });
+}
+
+setInterval(updateClock, 1000);
+
+setInterval(() => {
+  currentPage = currentPage === 1 ? 2 : 1;
+  render();
+}, CONFIG.rotateMs);
+
+setInterval(loadData, CONFIG.refreshMs);
+
+updateClock();
+loadData();
+</script>
+
+</body>
+</html>
